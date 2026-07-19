@@ -1,5 +1,4 @@
 ﻿#pragma once
-#pragma comment( lib, "KratosPPLib.lib" )
 #include <Windows.h>
 #include <Version.h>
 
