@@ -1,85 +1,47 @@
-[![license](https://www.gnu.org/graphics/lgplv3-147x51.png)](https://www.gnu.org/licenses/lgpl-3.0.en.html)
+# GiftBoxHost
 
-前言 (Foreword)
-============
-**如果你是DPKratos用户，请在使用本产品前，务必完全删除DPKratos。**：
-- 文件夹`"DynamicPatcher"`
-- DLL文件`"DynamicPatcher.dll"`
-- DLL文件`"DynamicPatcher_RELEASE.dll"`
-- DLL文件`"PatcherLoader.dll"`
+A **standalone** Yuri's Revenge [Syringe](https://github.com/Ares-Developers/Syringe) DLL that
+implements the **Host** and **GiftBox** unit-spawning features — reimplemented cleanly, independent
+of the Kratos framework, so it can coexist with other Syringe DLLs and avoids Kratos's shared-RNG
+network-desync issue.
 
-**If you are a DPKratos user, please be sure to completely remove DPKratos before using this product.**:
-- Folder `"DynamicPatcher"`
-- DLL `"DynamicPatcher.dll"`
-- DLL `"DynamicPatcher_RELEASE.dll"`
-- DLL `"PatcherLoader.dll"`
+## Why this exists
 
-关于Kratos-PP（About Kratos-PP）
-============
+Kratos-PP bundles these features into a large component framework whose shared pseudo-random
+generator mixes **synchronized game-logic** randomness with **unsynchronized rendering** randomness
+— a classic multiplayer-desync design (see [docs/DESIGN.md](docs/DESIGN.md)).
 
-`Kratos PP` 是基于原 `DPKratos` 的 C++ 移植版。   
-`Kratos PP` is a C++ ported version based on the original `DPKratos`.
+This project extracts just Host + GiftBox as a small, self-contained DLL that:
 
-该版本将舍弃所有的动态特性，完全封装，以求更快，更轻。   
-This version will discard all dynamic features and completely encapsulate them in order to be faster and lighter.
+- Carries **none** of Kratos's framework (no component system, no `TechnoStatus`, no `AttachEffect`).
+- Uses the game's **synchronized RNG** (`ScenarioClass::Instance->Random`) for all spawn logic → desync-safe by construction.
+- Hooks only the minimal set of addresses it needs, so it can be loaded **alongside** other Syringe DLLs.
+- Ports Kratos's actual spawn algorithm, so in-game behavior stays faithful.
 
-关于DPKratos (About DPKratos)
-============
+## Status
 
-DynamicPatcher是由开发者Xkein创建的尤里的复仇MOD开发平台，[项目主页](https://github.com/Xkein/YRDynamicPatcher)  
-DynamicPatcher is Yuri's Revenge MOD *development platform* created by developer Xkein.
+Built in stages (each verified by CI on `windows-2022`):
 
-Kratos项目是尤里的复仇MOD《乱来时刻（WWSB HOUR）》的作者 **双杀步枪（ChrisLv_CN）** 所创建的DP应用项目。[MOD作者主页](https://space.bilibili.com/276838)  
-Project Kratos is a DP application project created by **ChrisLv_CN**, the author of Yuri's revenge MOD "WWSB HOUR".
+- [x] **Stage 0** — minimal buildable skeleton (bootstrap + hook, no framework).
+- [ ] **Stage 1** — lightweight per-unit state + INI parsing.
+- [ ] **Stage 2** — Host (spawn-on-unit) with synced RNG + `Host.OnlyBuilt` chain-spawn guard.
+- [ ] **Stage 3** — GiftBox.
+- [ ] **Stage 4** — save/load, polish.
 
-DPKratos是使用DP进行开发，以INI标签的形式为MOD提供全新特性的尤里的复仇扩展平台。  
-Project DPKratos is a Yuri's revenge extension platform developed using DP and providing MOD with new features in the form of INI tags.
+## Build
 
-食用方法 (How to use)
-------------
+x86 MSVC (Syringe DLL). CI builds `GiftBoxHost.dll` via
+`msbuild GiftBoxHost.sln /p:Configuration=Release /p:Platform=x86`.
+YRpp is a submodule — clone with `--recursive`.
 
-1. 前往[Release](https://github.com/ChrisLv-CN/KratosPP/releases)下载最新的压缩包。  
-Go to [Release](https://github.com/ChrisLv-CN/KratosPP/releases) to download the latest package.
+## Compatibility note
 
-2. 把文件`Kratos.dll`放入尤里的复仇游戏根目录下。  
-Put the file `Kratos.dll` into Yuri's Revenge game root directory.
+This DLL is **not** a trimmed Kratos; it is an independent reimplementation. It does not share INI
+syntax with Kratos's `AttachEffect`-based Host — tags are placed **directly on the TechnoType**
+(documented as features land). GiftBoxHost and Kratos use different code paths, so they do not
+duplicate each other's framework work; but if you enable the *same* spawning ability in both, you
+will get it twice. Enable each feature in exactly one place.
 
-3. 在`ini`中添加对应的内容。  
-Edit `ini` file
+## License
 
-4. 为`gamemd.exe`与`syringe.exe`添加管理员权限。  
-Add administrator privileges to `gamemd.exe` and `syringe.exe`.
-
-5. 运行`RunAres.bat`启动游戏。  
-Run `RunAres.bat` to start the game.
-
-帮助文档 (Documents)
-------------
-* [食用说明书](https://github.com/ChrisLv-CN/KratosPP/blob/main/%E9%99%84%E4%BB%B6%E5%8C%85/Kratos%E9%A3%9F%E7%94%A8%E8%AF%B4%E6%98%8E%E4%B9%A6.ini)
-* [Wiki](https://github.com/ChrisLv-CN/KratosPP/wiki)
-
-开发者 (Developers)
-------------
-* [艾木魁](https://space.bilibili.com/194846) (M.Kenosis) - 主策划
-* [双杀步枪](https://space.bilibili.com/276838) (ChrisLv_CN) - 开发者
-* [冲冲冲14782](https://space.bilibili.com/149326956/) - 测试
-
-鸣谢 (Credits)
-------------
-* [DynamicPatcher](https://github.com/Xkein/YRDynamicPatcher) ALL developers
-* Ares ALL developers
-* [Phobos](https://github.com/Phobos-developers/Phobos) ALL developers
-* [hejiajun107](https://github.com/hejiajun107) - 提供战机区域警戒功能
-* [RA2DIY](https://bbs.ra2diy.com/) 红警2Mod开发私人会所
-
-要饭 (Funding)
-------------
-如果你喜欢本项目，并想通过资助来帮助本项目，可以通过以下方式。  
-If you like this project and want to fund it, here's how you can do it. 
-* PayPal - 12737@live.com
-* 支付宝 - [Alipay](https://github.com/ChrisLv-CN/KratosPP/blob/main/Images/alipay.jpg)
-* 微信 - [Wechat](https://github.com/ChrisLv-CN/KratosPP/blob/main/Images/wechat.png)
-* 爱发电 - [Afdian](https://afdian.net/@chrislv)
-
-
-
+LGPL v3 — see [LICENSE.md](LICENSE.md). Spawn algorithm derived from Kratos-PP (LGPL v3).

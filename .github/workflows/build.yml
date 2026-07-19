@@ -1,8 +1,8 @@
-name: Build KratosPP
+name: Build GiftBoxHost
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, standalone ]
   pull_request:
     branches: [ main ]
   workflow_dispatch:
@@ -17,34 +17,14 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install ATL
-        shell: cmd
-        run: |
-          for /f "tokens=*" %%i in ('"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath') do set VS_PATH=%%i
-          echo VS Path: %VS_PATH%
-          "%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vs_installer.exe" modify --installPath "%VS_PATH%" --add Microsoft.VisualStudio.Component.VC.ATL --quiet --norestart --force
-          ping -n 61 127.0.0.1 > nul
-
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
-      - name: Find atls.lib
-        shell: pwsh
-        run: |
-          Get-ChildItem "C:\Program Files\Microsoft Visual Studio\2022\Enterprise" -Recurse -Filter "atls.lib" -ErrorAction SilentlyContinue | Select-Object FullName
-
-      - name: Copy atls.lib to linker path
-        shell: pwsh
-        run: |
-          $src = "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\MSVC\14.44.35207\atlmfc\lib\x86\atls.lib"
-          $dst = "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\MSVC\14.29.30133\lib\x86\atls.lib"
-          Copy-Item $src $dst -Force
-
       - name: Build
-        run: msbuild Kratos.sln /p:Configuration=Release /p:Platform=x86 /p:PostBuildEventUseInBuild=false
+        run: msbuild GiftBoxHost.sln /p:Configuration=Release /p:Platform=x86
 
       - name: Upload DLL artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Kratos
-          path: output/Release/Kratos.dll
+          name: GiftBoxHost
+          path: output/Release/GiftBoxHost.dll
