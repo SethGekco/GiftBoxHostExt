@@ -190,12 +190,21 @@ namespace GiftBoxHost
 			int count = (i < cfg.nums.size() && cfg.nums[i] > 0) ? cfg.nums[i] : 1;
 			TechnoTypeClass* pSpawnType = TechnoTypeClass::Find(cfg.types[i].c_str());
 			if (!pSpawnType)
+			{
+				Log("[Host] %s: spawn type '%s' NOT FOUND", pType->ID, cfg.types[i].c_str());
 				continue;
+			}
+			int ok = 0;
 			for (int c = 0; c < count; ++c)
 			{
 				if (TechnoClass* pGift = CreateAndPutTechno(pSpawnType, pHouse, origin))
+				{
 					MarkGiftSpawned(pGift);
+					++ok;
+				}
 			}
+			Log("[Host] %s burst: spawned %d/%d %s at (%d,%d,%d)",
+				pType->ID, ok, count, cfg.types[i].c_str(), origin.X, origin.Y, origin.Z);
 		}
 
 		st.timer = NextDelay(cfg);
