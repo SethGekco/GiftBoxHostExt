@@ -20,8 +20,11 @@ jobs:
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
+      - name: Enable MSVC problem matcher
+        uses: ammaraskar/msvc-problem-matcher@master
+
       - name: Build
-        run: msbuild GiftBoxHost.sln /p:Configuration=Release /p:Platform=x86
+        run: msbuild GiftBoxHost.sln /p:Configuration=Release /p:Platform=x86 /nologo /consoleloggerparameters:NoSummary
 
       - name: Upload DLL artifact
         uses: actions/upload-artifact@v4
