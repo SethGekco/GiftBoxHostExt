@@ -12,7 +12,8 @@ All tags go **directly on the spawning unit's TechnoType** section in `rulesmd.i
 | `Host.Delay` | int (frames) | `0` | Frames between spawn bursts. `0` = every frame. |
 | `Host.RandomDelay` | `min,max` | *(off)* | If set, each burst waits a **synced-random** delay in `[min,max]`, overriding `Host.Delay`. |
 | `Host.InitialDelay` | int (frames) | `0` | Delay before the first burst. |
-| `Host.OnlyBuilt` | bool | `no` | If `yes`, units that were themselves spawned by a Host never spawn their own copies (prevents the chain-spawn explosion when `Host.Types` includes the host's own type). |
+| `Host.TriggeredTimes` | int | `0` | Max number of bursts per unit (`0` = unlimited). Use this to make a unit spawn only N times, then stop. |
+| `Host.OnlyBuilt` | bool | `no` | If `yes`, units that were themselves spawned by a Host never spawn their own copies (prevents the chain-spawn explosion when `Host.Types` includes the host's own type). **Note:** this does *not* stop the originally-built unit from spawning on its timer — use `Host.TriggeredTimes` or `Host.Delay` to bound that. |
 
 ### Example
 

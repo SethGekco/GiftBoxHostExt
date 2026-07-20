@@ -32,6 +32,7 @@ namespace GiftBoxHost
 		int delayMin = 0;                 // Host.RandomDelay min (0 => use delay)
 		int delayMax = 0;                 // Host.RandomDelay max
 		int initialDelay = 0;             // Host.InitialDelay
+		int triggeredTimes = 0;           // Host.TriggeredTimes (0 = unlimited)
 		bool onlyBuilt = false;           // Host.OnlyBuilt
 	};
 
@@ -40,6 +41,7 @@ namespace GiftBoxHost
 	{
 		bool initialized = false;   // has the timer been primed?
 		int timer = 0;              // frames until next burst
+		int count = 0;              // bursts performed (vs Host.TriggeredTimes)
 		bool isGiftSpawned = false; // this unit was produced by a Host (chain guard)
 	};
 

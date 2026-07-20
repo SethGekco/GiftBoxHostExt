@@ -95,6 +95,7 @@ namespace GiftBoxHost
 
 			cfg.delay = pINI->ReadInteger(section, "Host.Delay", 0);
 			cfg.initialDelay = pINI->ReadInteger(section, "Host.InitialDelay", 0);
+			cfg.triggeredTimes = pINI->ReadInteger(section, "Host.TriggeredTimes", 0);
 			cfg.onlyBuilt = pINI->ReadBool(section, "Host.OnlyBuilt", false);
 
 			pINI->ReadString(section, "Host.RandomDelay", "", buf, sizeof(buf));
@@ -170,6 +171,10 @@ namespace GiftBoxHost
 		if (cfg.onlyBuilt && st.isGiftSpawned)
 			return;
 
+		// Burst cap: stop after Host.TriggeredTimes bursts (0 = unlimited).
+		if (cfg.triggeredTimes > 0 && st.count >= cfg.triggeredTimes)
+			return;
+
 		if (!st.initialized)
 		{
 			st.initialized = true;
@@ -203,10 +208,12 @@ namespace GiftBoxHost
 					++ok;
 				}
 			}
-			Log("[Host] %s burst: spawned %d/%d %s at (%d,%d,%d)",
-				pType->ID, ok, count, cfg.types[i].c_str(), origin.X, origin.Y, origin.Z);
+			Log("[Host] %s burst by %p (gift=%d cnt=%d): spawned %d/%d %s at (%d,%d,%d)",
+				pType->ID, (void*)pTechno, (int)st.isGiftSpawned, st.count,
+				ok, count, cfg.types[i].c_str(), origin.X, origin.Y, origin.Z);
 		}
 
+		++st.count;
 		st.timer = NextDelay(cfg);
 	}
 }
