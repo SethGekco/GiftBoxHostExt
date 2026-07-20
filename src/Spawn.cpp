@@ -10,6 +10,7 @@
 #include <Unsorted.h>
 
 #include <unordered_set>
+#include <utility>
 
 namespace GiftBoxHost::Spawn
 {
@@ -79,6 +80,98 @@ namespace GiftBoxHost::Spawn
 			}
 		}
 		return ok;
+	}
+
+	int ReleaseList(const std::vector<TechnoTypeClass*>& gifts, HouseClass* pHouse,
+		CoordStruct origin, int range, bool emptyCell)
+	{
+		int ok = 0;
+		for (TechnoTypeClass* pType : gifts)
+		{
+			CellClass* pCell = PickCell(pType, origin, range, emptyCell);
+			if (TechnoClass* pGift = CreateAndPut(pType, pHouse, pCell))
+			{
+				MarkGiftSpawned(pGift);
+				++ok;
+			}
+		}
+		return ok;
+	}
+
+	// ---- gift-list resolution (weighting + chances, synced RNG) --------------
+	static bool Bingo(const std::vector<double>& chances, int index)
+	{
+		if (static_cast<int>(chances.size()) < index + 1)
+			return true; // no chance given for this index -> always
+		double c = chances[index];
+		if (c <= 0.0) return false;
+		if (c >= 1.0) return true;
+		double roll = ScenarioClass::Instance->Random.RandomRanged(0, 9999) / 10000.0; // [0,1)
+		return c > roll;
+	}
+
+	std::vector<TechnoTypeClass*> BuildGiftList(
+		const std::vector<std::string>& types,
+		const std::vector<int>& nums,
+		const std::vector<double>& chances,
+		bool randomType,
+		const std::vector<int>& weights)
+	{
+		std::vector<TechnoTypeClass*> out;
+		int typeCount = static_cast<int>(types.size());
+		if (typeCount == 0)
+			return out;
+
+		auto resolve = [](const std::string& id) -> TechnoTypeClass* {
+			return TechnoTypeClass::Find(id.c_str());
+		};
+
+		if (randomType)
+		{
+			// total picks = sum(nums) (or 1 if no nums)
+			int times = 1;
+			if (!nums.empty())
+			{
+				times = 0;
+				for (int n : nums) times += n;
+			}
+			// cumulative weight ranges: index i owns [lo, hi)
+			int maxValue = 0;
+			std::vector<std::pair<int, int>> pad;
+			pad.reserve(typeCount);
+			for (int i = 0; i < typeCount; ++i)
+			{
+				int lo = maxValue;
+				int w = (static_cast<int>(weights.size()) > i && weights[i] > 0) ? weights[i] : 1;
+				maxValue += w;
+				pad.emplace_back(lo, maxValue);
+			}
+			for (int t = 0; t < times; ++t)
+			{
+				int index = 0;
+				if (maxValue > 0)
+				{
+					int p = ScenarioClass::Instance->Random.RandomRanged(0, maxValue - 1);
+					for (int i = 0; i < typeCount; ++i)
+						if (p >= pad[i].first && p < pad[i].second) { index = i; break; }
+				}
+				if (Bingo(chances, index))
+					if (TechnoTypeClass* pType = resolve(types[index]))
+						out.push_back(pType);
+			}
+		}
+		else
+		{
+			for (int i = 0; i < typeCount; ++i)
+			{
+				int count = (static_cast<int>(nums.size()) > i && nums[i] > 0) ? nums[i] : 1;
+				for (int c = 0; c < count; ++c)
+					if (Bingo(chances, i))
+						if (TechnoTypeClass* pType = resolve(types[i]))
+							out.push_back(pType);
+			}
+		}
+		return out;
 	}
 
 	void MarkGiftSpawned(TechnoClass* pTechno) { g_giftSpawned.insert(pTechno); }

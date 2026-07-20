@@ -47,4 +47,20 @@ namespace GiftBoxHost::Ini
 			out.push_back(atoi(tok.c_str()));
 		return out;
 	}
+
+	// Parses a chance list into [0,1] doubles. Accepts "50%" or "0.5" (values > 1
+	// without a '%' are still treated as percentages, matching common mod usage).
+	inline std::vector<double> SplitChances(const char* raw)
+	{
+		std::vector<double> out;
+		for (const std::string& tok : SplitList(raw))
+		{
+			bool pct = tok.find('%') != std::string::npos;
+			double v = atof(tok.c_str());
+			if (pct || v > 1.0) v /= 100.0;
+			if (v < 0.0) v = 0.0;
+			out.push_back(v);
+		}
+		return out;
+	}
 }

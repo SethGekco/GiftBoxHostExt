@@ -44,6 +44,12 @@ namespace GiftBoxHost
 			cfg.openWhenDestroyed = pINI->ReadBool(s, "GiftBox.OpenWhenDestroyed", false);
 			cfg.remove = pINI->ReadBool(s, "GiftBox.Remove", true);
 			cfg.explodes = pINI->ReadBool(s, "GiftBox.Explodes", false);
+			cfg.randomType = pINI->ReadBool(s, "GiftBox.RandomType", false);
+
+			pINI->ReadString(s, "GiftBox.RandomWeights", "", buf, sizeof(buf));
+			cfg.weights = Ini::SplitInts(buf);
+			pINI->ReadString(s, "GiftBox.Chances", "", buf, sizeof(buf));
+			cfg.chances = Ini::SplitChances(buf);
 
 			pINI->ReadString(s, "GiftBox.RandomDelay", "", buf, sizeof(buf));
 			std::vector<int> rd = Ini::SplitInts(buf);
@@ -65,19 +71,10 @@ namespace GiftBoxHost
 		HouseClass* pHouse = pBox->Owner;
 		CoordStruct origin = pBox->GetCoords();
 		TechnoTypeClass* pBoxType = pBox->GetTechnoType();
-		for (size_t i = 0; i < cfg.types.size(); ++i)
-		{
-			int count = (i < cfg.nums.size() && cfg.nums[i] > 0) ? cfg.nums[i] : 1;
-			TechnoTypeClass* pGiftType = TechnoTypeClass::Find(cfg.types[i].c_str());
-			if (!pGiftType)
-			{
-				Log("[GiftBox] %s: gift '%s' NOT FOUND", pBoxType->ID, cfg.types[i].c_str());
-				continue;
-			}
-			int ok = Spawn::Release(pGiftType, pHouse, origin, count, cfg.randomRange, cfg.emptyCell);
-			Log("[GiftBox] %s open(%s): released %d/%d %s at (%d,%d,%d)",
-				pBoxType->ID, why, ok, count, cfg.types[i].c_str(), origin.X, origin.Y, origin.Z);
-		}
+		auto gifts = Spawn::BuildGiftList(cfg.types, cfg.nums, cfg.chances, cfg.randomType, cfg.weights);
+		int ok = Spawn::ReleaseList(gifts, pHouse, origin, cfg.randomRange, cfg.emptyCell);
+		Log("[GiftBox] %s open(%s): released %d/%d at (%d,%d,%d)",
+			pBoxType->ID, why, ok, (int)gifts.size(), origin.X, origin.Y, origin.Z);
 	}
 
 	void ForgetGiftBox(TechnoClass* pTechno) { g_states.erase(pTechno); }

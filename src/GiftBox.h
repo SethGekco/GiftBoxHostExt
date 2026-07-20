@@ -41,6 +41,9 @@ namespace GiftBoxHost
 		bool openWhenDestroyed = false;
 		bool remove = true;
 		bool explodes = false;
+		bool randomType = false;          // GiftBox.RandomType
+		std::vector<int> weights;         // GiftBox.RandomWeights
+		std::vector<double> chances;      // GiftBox.Chances
 	};
 
 	struct GiftBoxState

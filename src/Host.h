@@ -38,6 +38,9 @@ namespace GiftBoxHost
 		int randomRange = 0;              // Host.RandomRange
 		bool emptyCell = true;            // Host.RandomToEmptyCell
 		bool onlyBuilt = false;           // Host.OnlyBuilt
+		bool randomType = false;          // Host.RandomType
+		std::vector<int> weights;         // Host.RandomWeights
+		std::vector<double> chances;      // Host.Chances
 	};
 
 	struct HostState

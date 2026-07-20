@@ -42,6 +42,12 @@ namespace GiftBoxHost
 			cfg.randomRange = pINI->ReadInteger(section, "Host.RandomRange", 0);
 			cfg.emptyCell = pINI->ReadBool(section, "Host.RandomToEmptyCell", true);
 			cfg.onlyBuilt = pINI->ReadBool(section, "Host.OnlyBuilt", false);
+			cfg.randomType = pINI->ReadBool(section, "Host.RandomType", false);
+
+			pINI->ReadString(section, "Host.RandomWeights", "", buf, sizeof(buf));
+			cfg.weights = Ini::SplitInts(buf);
+			pINI->ReadString(section, "Host.Chances", "", buf, sizeof(buf));
+			cfg.chances = Ini::SplitChances(buf);
 
 			pINI->ReadString(section, "Host.RandomDelay", "", buf, sizeof(buf));
 			std::vector<int> rd = Ini::SplitInts(buf);
@@ -94,20 +100,11 @@ namespace GiftBoxHost
 
 		HouseClass* pHouse = pTechno->Owner;
 		CoordStruct origin = pTechno->GetCoords();
-		for (size_t i = 0; i < cfg.types.size(); ++i)
-		{
-			int count = (i < cfg.nums.size() && cfg.nums[i] > 0) ? cfg.nums[i] : 1;
-			TechnoTypeClass* pSpawnType = TechnoTypeClass::Find(cfg.types[i].c_str());
-			if (!pSpawnType)
-			{
-				Log("[Host] %s: spawn type '%s' NOT FOUND", pType->ID, cfg.types[i].c_str());
-				continue;
-			}
-			int ok = Spawn::Release(pSpawnType, pHouse, origin, count, cfg.randomRange, cfg.emptyCell);
-			Log("[Host] %s burst by %p (cnt=%d): spawned %d/%d %s at (%d,%d,%d)",
-				pType->ID, (void*)pTechno, st.count, ok, count, cfg.types[i].c_str(),
-				origin.X, origin.Y, origin.Z);
-		}
+		auto gifts = Spawn::BuildGiftList(cfg.types, cfg.nums, cfg.chances, cfg.randomType, cfg.weights);
+		int ok = Spawn::ReleaseList(gifts, pHouse, origin, cfg.randomRange, cfg.emptyCell);
+		Log("[Host] %s burst by %p (cnt=%d): spawned %d/%d at (%d,%d,%d)",
+			pType->ID, (void*)pTechno, st.count, ok, (int)gifts.size(),
+			origin.X, origin.Y, origin.Z);
 
 		++st.count;
 		st.timer = NextDelay(cfg);
