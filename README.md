@@ -23,10 +23,15 @@ This project extracts just Host + GiftBox as a small, self-contained DLL that:
 Built in stages (each verified by CI on `windows-2022`):
 
 - [x] **Stage 0** — minimal buildable skeleton (bootstrap + hook, no framework).
-- [ ] **Stage 1** — lightweight per-unit state + INI parsing.
-- [ ] **Stage 2** — Host (spawn-on-unit) with synced RNG + `Host.OnlyBuilt` chain-spawn guard.
+- [~] **Stage 1** — lightweight per-unit state + INI parsing. *(drafted, pending CI)*
+- [~] **Stage 2** — Host (spawn-on-unit) with synced RNG + `Host.OnlyBuilt` chain-spawn guard. *(drafted, pending CI)*
 - [ ] **Stage 3** — GiftBox.
 - [ ] **Stage 4** — save/load, polish.
+
+> Stages 1–2 are committed but **not yet compiled** — the CI build is blocked on
+> GitHub auth (see the working notes). Expect a fix-up pass once it builds.
+
+See [docs/TAGS.md](docs/TAGS.md) for the Host INI tags.
 
 ## Build
 
