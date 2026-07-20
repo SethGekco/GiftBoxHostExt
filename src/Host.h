@@ -22,6 +22,7 @@
 
 class TechnoClass;
 class TechnoTypeClass;
+struct IStream;
 
 namespace GiftBoxHost
 {
@@ -57,4 +58,7 @@ namespace GiftBoxHost
 
 	// Drop this unit's Host state (called from the TechnoClass destructor hook).
 	void ForgetHost(TechnoClass* pTechno);
+
+	void SaveHostState(IStream* stream);
+	void LoadHostState(IStream* stream);
 }

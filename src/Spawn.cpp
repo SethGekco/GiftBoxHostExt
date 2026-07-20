@@ -1,4 +1,5 @@
 #include "Spawn.h"
+#include "Serialize.h"
 
 #include <GeneralDefinitions.h>   // DirType
 #include <TechnoClass.h>
@@ -177,4 +178,23 @@ namespace GiftBoxHost::Spawn
 	void MarkGiftSpawned(TechnoClass* pTechno) { g_giftSpawned.insert(pTechno); }
 	bool IsGiftSpawned(TechnoClass* pTechno) { return g_giftSpawned.count(pTechno) != 0; }
 	void Forget(TechnoClass* pTechno) { g_giftSpawned.erase(pTechno); }
+
+	void SaveState(IStream* stream)
+	{
+		unsigned count = static_cast<unsigned>(g_giftSpawned.size());
+		Serialize::Write(stream, count);
+		for (TechnoClass* p : g_giftSpawned)
+			Serialize::WritePtr(stream, p);
+	}
+
+	void LoadState(IStream* stream)
+	{
+		g_giftSpawned.clear();
+		unsigned count = 0;
+		if (!Serialize::Read(stream, count))
+			return;
+		for (unsigned i = 0; i < count; ++i)
+			if (void* p = Serialize::ReadSwizzled(stream))
+				g_giftSpawned.insert(static_cast<TechnoClass*>(p));
+	}
 }

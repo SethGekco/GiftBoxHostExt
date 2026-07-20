@@ -23,6 +23,7 @@
 
 class TechnoClass;
 class TechnoTypeClass;
+struct IStream;
 
 namespace GiftBoxHost
 {
@@ -63,4 +64,7 @@ namespace GiftBoxHost
 
 	// Drop this unit's GiftBox state (from the TechnoClass destructor hook).
 	void ForgetGiftBox(TechnoClass* pTechno);
+
+	void SaveGiftBoxState(IStream* stream);
+	void LoadGiftBoxState(IStream* stream);
 }

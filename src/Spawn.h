@@ -12,9 +12,14 @@ class TechnoClass;
 class TechnoTypeClass;
 class HouseClass;
 class CellClass;
+struct IStream;
 
 namespace GiftBoxHost::Spawn
 {
+	// Save/load the gift-spawned registry (appended to the savegame stream).
+	void SaveState(IStream* stream);
+	void LoadState(IStream* stream);
+
 	// Resolve the concrete list of gift types to spawn this trigger, applying
 	// RandomType weighting (RandomWeights) and per-type Chances via the synced RNG.
 	//  - randomType=false: each type i spawned nums[i] times (default 1), gated by chances[i].

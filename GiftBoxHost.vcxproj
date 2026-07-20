@@ -19,10 +19,12 @@
     <ClCompile Include="src\Spawn.cpp" />
     <ClCompile Include="src\Host.cpp" />
     <ClCompile Include="src\GiftBox.cpp" />
+    <ClCompile Include="src\SaveLoad.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Log.h" />
     <ClInclude Include="src\Ini.h" />
+    <ClInclude Include="src\Serialize.h" />
     <ClInclude Include="src\Spawn.h" />
     <ClInclude Include="src\Host.h" />
     <ClInclude Include="src\GiftBox.h" />

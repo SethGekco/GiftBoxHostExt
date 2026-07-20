@@ -1,6 +1,7 @@
 #include "Host.h"
 #include "Spawn.h"
 #include "Ini.h"
+#include "Serialize.h"
 #include "Log.h"
 
 #include <TechnoClass.h>
@@ -66,6 +67,34 @@ namespace GiftBoxHost
 	}
 
 	void ForgetHost(TechnoClass* pTechno) { g_states.erase(pTechno); }
+
+	void SaveHostState(IStream* stream)
+	{
+		unsigned count = static_cast<unsigned>(g_states.size());
+		Serialize::Write(stream, count);
+		for (auto& kv : g_states)
+		{
+			Serialize::WritePtr(stream, kv.first);
+			Serialize::Write(stream, kv.second);
+		}
+	}
+
+	void LoadHostState(IStream* stream)
+	{
+		g_states.clear();
+		unsigned count = 0;
+		if (!Serialize::Read(stream, count))
+			return;
+		for (unsigned i = 0; i < count; ++i)
+		{
+			void* p = Serialize::ReadSwizzled(stream);
+			HostState st;
+			if (!Serialize::Read(stream, st))
+				return;
+			if (p)
+				g_states[static_cast<TechnoClass*>(p)] = st;
+		}
+	}
 
 	void UpdateHost(TechnoClass* pTechno)
 	{
