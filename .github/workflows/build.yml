@@ -7,6 +7,9 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: windows-2022
@@ -40,3 +43,13 @@ jobs:
         with:
           name: GiftBoxHost
           path: output/Release/GiftBoxHost.dll
+
+      - name: Publish DLL to rolling prerelease (public, curl-able)
+        if: success() && github.ref == 'refs/heads/standalone'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: standalone-latest
+          name: standalone-latest
+          prerelease: true
+          files: output/Release/GiftBoxHost.dll
+          fail_on_unmatched_files: true
