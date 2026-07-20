@@ -8,6 +8,7 @@
 #include "Spawn.h"
 
 #include <Helpers/Macro.h>   // DEFINE_HOOK, GET
+#include <FootClass.h>       // complete type needed by YRpp cast traits pulled via Macro.h
 #include <TechnoClass.h>
 
 // Per-unit update tick (thiscall -> ECX).
