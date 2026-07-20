@@ -15,11 +15,17 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Main.cpp" />
+    <ClCompile Include="src\Hooks.cpp" />
+    <ClCompile Include="src\Spawn.cpp" />
     <ClCompile Include="src\Host.cpp" />
+    <ClCompile Include="src\GiftBox.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Log.h" />
+    <ClInclude Include="src\Ini.h" />
+    <ClInclude Include="src\Spawn.h" />
     <ClInclude Include="src\Host.h" />
+    <ClInclude Include="src\GiftBox.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

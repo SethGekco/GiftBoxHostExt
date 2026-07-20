@@ -33,9 +33,42 @@ Host.Delay=450
 Host.OnlyBuilt=yes    ; only the factory-built SREF clones; clones don't chain
 ```
 
+## GiftBox — a "box" that releases units when it opens
+
+A box opens either on a **timer** or, iconically, **when it's destroyed**
+(`GiftBox.OpenWhenDestroyed=yes`), releasing its gifts. Shares Host's placement,
+chain-guard and synced RNG.
+
+| Key | Type | Default | Meaning |
+|-----|------|---------|---------|
+| `GiftBox.Types` | list of type IDs | *(none)* | Units to release. **Required** — enables GiftBox. |
+| `GiftBox.Nums` | list of ints | `1` each | Count per entry in `GiftBox.Types`. |
+| `GiftBox.OpenWhenDestroyed` | bool | `no` | If `yes`, the box opens **on death** (e.g. a transport that spills units when killed) instead of on a timer. |
+| `GiftBox.Delay` | int (frames) | `0` | Timer mode: frames before the box opens. |
+| `GiftBox.RandomDelay` | `min,max` | *(off)* | Timer mode: synced-random delay in `[min,max]`. |
+| `GiftBox.InitialDelay` | int (frames) | `0` | Delay before the timer starts. |
+| `GiftBox.Remove` | bool | `yes` | Timer mode: destroy the box after it opens (`no` = re-arm and open again). |
+| `GiftBox.RandomRange` | int (cells) | `0` | Scatter radius for the released units. |
+| `GiftBox.RandomToEmptyCell` | bool | `yes` | Prefer clear cells when scattering. |
+| `GiftBox.OnlyBuilt` | bool | `no` | Gift-spawned boxes never open (chain guard). |
+
+```ini
+[TRANS]               ; transport that spills 3 GIs when destroyed
+GiftBox.Types=E2
+GiftBox.Nums=3
+GiftBox.OpenWhenDestroyed=yes
+GiftBox.RandomRange=2
+
+[CRATE]               ; a timed box: opens after 5s, releases a dog, then vanishes
+GiftBox.Types=DOG
+GiftBox.Delay=75
+GiftBox.Remove=yes
+```
+
 ## Notes
 
-- All randomness uses the game's synchronized RNG, so Host is multiplayer-safe.
-- Spawned units take the host's owner (house).
-- v1 spawns at the host's own cell; positional scatter (`Host.RandomRange`, empty-cell
-  search) will land in a later revision.
+- All randomness uses the game's synchronized RNG, so Host and GiftBox are multiplayer-safe.
+- Spawned units take the host/box owner (house).
+- Host and GiftBox can be combined on the same unit if you want both behaviors.
+- Not yet ported: type weighting (`RandomType`/`RandomWeights`/`Chances`) and
+  inheritance (health/veterancy/passengers). Coming in a later revision.

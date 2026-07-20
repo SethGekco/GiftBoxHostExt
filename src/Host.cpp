@@ -1,77 +1,20 @@
 #include "Host.h"
+#include "Spawn.h"
+#include "Ini.h"
 #include "Log.h"
 
-#include <Helpers/Macro.h>   // DEFINE_HOOK, GET  (pulls in Syringe.h)
-
-#include <GeneralDefinitions.h>   // DirType
-#include <GeneralStructures.h>    // CoordStruct
 #include <TechnoClass.h>
 #include <TechnoTypeClass.h>
 #include <HouseClass.h>
-#include <MapClass.h>
-#include <CellClass.h>
 #include <ScenarioClass.h>
 #include <CCINIClass.h>
-#include <Unsorted.h>
 
 #include <unordered_map>
-#include <cstring>
-#include <cctype>
-#include <cstdlib>
 
 namespace GiftBoxHost
 {
-	// ---- caches / registries -------------------------------------------------
-	// Config is keyed by TechnoType (parsed once). State is keyed by live unit;
-	// we only ever look up by the current unit pointer — never iterate for game
-	// logic — so pointer keys are deterministic and netplay-safe.
 	static std::unordered_map<TechnoTypeClass*, HostConfig> g_configs;
 	static std::unordered_map<TechnoClass*, HostState> g_states;
-
-	// ---- INI helpers ---------------------------------------------------------
-	static bool IsNoneToken(const std::string& s)
-	{
-		return s.empty() || _stricmp(s.c_str(), "none") == 0 || _stricmp(s.c_str(), "<none>") == 0;
-	}
-
-	static std::string Trim(const std::string& s)
-	{
-		size_t a = 0, b = s.size();
-		while (a < b && std::isspace((unsigned char)s[a])) ++a;
-		while (b > a && std::isspace((unsigned char)s[b - 1])) --b;
-		return s.substr(a, b - a);
-	}
-
-	static std::vector<std::string> SplitList(const char* raw)
-	{
-		std::vector<std::string> out;
-		std::string cur;
-		for (const char* p = raw; ; ++p)
-		{
-			if (*p == ',' || *p == '\0')
-			{
-				std::string tok = Trim(cur);
-				if (!IsNoneToken(tok)) out.push_back(tok);
-				cur.clear();
-				if (*p == '\0') break;
-			}
-			else
-			{
-				cur.push_back(*p);
-			}
-		}
-		return out;
-	}
-
-	static std::vector<int> SplitInts(const char* raw)
-	{
-		std::vector<int> out;
-		for (const std::string& tok : SplitList(raw))
-		{
-			out.push_back(atoi(tok.c_str()));
-		}
-		return out;
-	}
 
 	const HostConfig& GetHostConfig(TechnoTypeClass* pType)
 	{
@@ -85,13 +28,13 @@ namespace GiftBoxHost
 		char buf[256];
 
 		pINI->ReadString(section, "Host.Types", "", buf, sizeof(buf));
-		cfg.types = SplitList(buf);
+		cfg.types = Ini::SplitList(buf);
 		if (!cfg.types.empty())
 		{
 			cfg.enabled = true;
 
 			pINI->ReadString(section, "Host.Nums", "", buf, sizeof(buf));
-			cfg.nums = SplitInts(buf);
+			cfg.nums = Ini::SplitInts(buf);
 
 			cfg.delay = pINI->ReadInteger(section, "Host.Delay", 0);
 			cfg.initialDelay = pINI->ReadInteger(section, "Host.InitialDelay", 0);
@@ -101,7 +44,7 @@ namespace GiftBoxHost
 			cfg.onlyBuilt = pINI->ReadBool(section, "Host.OnlyBuilt", false);
 
 			pINI->ReadString(section, "Host.RandomDelay", "", buf, sizeof(buf));
-			std::vector<int> rd = SplitInts(buf);
+			std::vector<int> rd = Ini::SplitInts(buf);
 			if (rd.size() >= 2) { cfg.delayMin = rd[0]; cfg.delayMax = rd[1]; }
 		}
 
@@ -109,62 +52,6 @@ namespace GiftBoxHost
 		return res.first->second;
 	}
 
-	// ---- spawn primitive (ported from Kratos Gift.cpp, synced-RNG only) ------
-
-	// Choose a placement cell near `origin`, within `range` cells, preferring one
-	// the spawn type can stand on. With emptyCell=true it avoids occupied cells so
-	// a burst spreads out instead of stacking. Netplay-safe: every client runs the
-	// same code with the same synced RNG and synced map/cell state, so the draws
-	// and the break happen identically everywhere.
-	static CellClass* PickSpawnCell(TechnoTypeClass* pType, CoordStruct origin, int range, bool emptyCell)
-	{
-		CellClass* pCenter = MapClass::Instance->TryGetCellAt(origin);
-		if (!pCenter || range <= 0)
-			return pCenter;
-
-		CellStruct center = pCenter->MapCoords;
-		int attempts = (2 * range + 1) * (2 * range + 1);
-		for (int i = 0; i < attempts; ++i)
-		{
-			int dx = ScenarioClass::Instance->Random.RandomRanged(-range, range);
-			int dy = ScenarioClass::Instance->Random.RandomRanged(-range, range);
-			CellStruct pos{ static_cast<short>(center.X + dx), static_cast<short>(center.Y + dy) };
-			if (CellClass* pCell = MapClass::Instance->TryGetCellAt(pos))
-			{
-				if (pCell->IsClearToMove(pType->SpeedType, pType->MovementZone, !emptyCell, !emptyCell))
-					return pCell;
-			}
-		}
-		return pCenter; // nothing clear found in range: fall back to the origin cell
-	}
-
-	static bool TryPutTechno(TechnoClass* pTechno, CellClass* pCell)
-	{
-		if (!pCell)
-			return false;
-
-		pTechno->OnBridge = pCell->ContainsBridge();
-		CoordStruct xyz = pCell->GetCoordsWithBridge();
-
-		++Unsorted::IKnowWhatImDoing;
-		pTechno->Unlimbo(xyz, DirType::East);
-		--Unsorted::IKnowWhatImDoing;
-
-		pTechno->SetLocation(xyz);
-		return true;
-	}
-
-	static TechnoClass* CreateAndPutTechno(TechnoTypeClass* pType, HouseClass* pHouse, CellClass* pCell)
-	{
-		// CreateObject for a TechnoType yields a TechnoClass-derived object
-		// (single, non-virtual inheritance chain), so this downcast is valid.
-		TechnoClass* pTechno = static_cast<TechnoClass*>(pType->CreateObject(pHouse));
-		if (pTechno && TryPutTechno(pTechno, pCell))
-			return pTechno;
-		return nullptr;
-	}
-
-	// ---- timing --------------------------------------------------------------
 	static int NextDelay(const HostConfig& cfg)
 	{
 		if (cfg.delayMax > cfg.delayMin && cfg.delayMax > 0)
@@ -172,16 +59,7 @@ namespace GiftBoxHost
 		return cfg.delay > 0 ? cfg.delay : 0;
 	}
 
-	// ---- public API ----------------------------------------------------------
-	void MarkGiftSpawned(TechnoClass* pTechno)
-	{
-		g_states[pTechno].isGiftSpawned = true;
-	}
-
-	void ForgetUnit(TechnoClass* pTechno)
-	{
-		g_states.erase(pTechno);
-	}
+	void ForgetHost(TechnoClass* pTechno) { g_states.erase(pTechno); }
 
 	void UpdateHost(TechnoClass* pTechno)
 	{
@@ -193,13 +71,12 @@ namespace GiftBoxHost
 		if (!cfg.enabled)
 			return;
 
-		HostState& st = g_states[pTechno];
-
-		// Chain-spawn guard: a unit produced by a Host never hosts its own copies.
-		if (cfg.onlyBuilt && st.isGiftSpawned)
+		// Chain-spawn guard: a unit produced by a Host/GiftBox never hosts copies.
+		if (cfg.onlyBuilt && Spawn::IsGiftSpawned(pTechno))
 			return;
 
 		// Burst cap: stop after Host.TriggeredTimes bursts (0 = unlimited).
+		HostState& st = g_states[pTechno];
 		if (cfg.triggeredTimes > 0 && st.count >= cfg.triggeredTimes)
 			return;
 
@@ -215,7 +92,6 @@ namespace GiftBoxHost
 			return;
 		}
 
-		// Burst: spawn each configured type near the host.
 		HouseClass* pHouse = pTechno->Owner;
 		CoordStruct origin = pTechno->GetCoords();
 		for (size_t i = 0; i < cfg.types.size(); ++i)
@@ -227,40 +103,13 @@ namespace GiftBoxHost
 				Log("[Host] %s: spawn type '%s' NOT FOUND", pType->ID, cfg.types[i].c_str());
 				continue;
 			}
-			int ok = 0;
-			for (int c = 0; c < count; ++c)
-			{
-				CellClass* pCell = PickSpawnCell(pSpawnType, origin, cfg.randomRange, cfg.emptyCell);
-				if (TechnoClass* pGift = CreateAndPutTechno(pSpawnType, pHouse, pCell))
-				{
-					MarkGiftSpawned(pGift);
-					++ok;
-				}
-			}
-			Log("[Host] %s burst by %p (gift=%d cnt=%d): spawned %d/%d %s at (%d,%d,%d)",
-				pType->ID, (void*)pTechno, (int)st.isGiftSpawned, st.count,
-				ok, count, cfg.types[i].c_str(), origin.X, origin.Y, origin.Z);
+			int ok = Spawn::Release(pSpawnType, pHouse, origin, count, cfg.randomRange, cfg.emptyCell);
+			Log("[Host] %s burst by %p (cnt=%d): spawned %d/%d %s at (%d,%d,%d)",
+				pType->ID, (void*)pTechno, st.count, ok, count, cfg.types[i].c_str(),
+				origin.X, origin.Y, origin.Z);
 		}
 
 		++st.count;
 		st.timer = NextDelay(cfg);
 	}
-}
-
-// ---- hooks -------------------------------------------------------------------
-
-// Per-unit update tick. thiscall -> ECX. Same address Kratos uses.
-DEFINE_HOOK(0x6F9E50, GiftBoxHost_TechnoUpdate, 0x5)
-{
-	GET(TechnoClass*, pThis, ECX);
-	GiftBoxHost::UpdateHost(pThis);
-	return 0;
-}
-
-// Techno destructor -> forget per-unit state so pointers can't go stale.
-DEFINE_HOOK(0x6F4500, GiftBoxHost_TechnoDTOR, 0x5)
-{
-	GET(TechnoClass*, pThis, ECX);
-	GiftBoxHost::ForgetUnit(pThis);
-	return 0;
 }
