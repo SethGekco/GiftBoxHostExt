@@ -13,6 +13,8 @@ All tags go **directly on the spawning unit's TechnoType** section in `rulesmd.i
 | `Host.RandomDelay` | `min,max` | *(off)* | If set, each burst waits a **synced-random** delay in `[min,max]`, overriding `Host.Delay`. |
 | `Host.InitialDelay` | int (frames) | `0` | Delay before the first burst. |
 | `Host.TriggeredTimes` | int | `0` | Max number of bursts per unit (`0` = unlimited). Use this to make a unit spawn only N times, then stop. |
+| `Host.RandomRange` | int (cells) | `0` | Scatter radius. `0` = spawn on the host's own cell (units stack); higher = spread spawns into nearby cells. |
+| `Host.RandomToEmptyCell` | bool | `yes` | When scattering, prefer cells the spawn can actually stand on (avoids stacking). Set `no` to allow occupied cells. |
 | `Host.OnlyBuilt` | bool | `no` | If `yes`, units that were themselves spawned by a Host never spawn their own copies (prevents the chain-spawn explosion when `Host.Types` includes the host's own type). **Note:** this does *not* stop the originally-built unit from spawning on its timer — use `Host.TriggeredTimes` or `Host.Delay` to bound that. |
 
 ### Example

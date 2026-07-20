@@ -33,6 +33,8 @@ namespace GiftBoxHost
 		int delayMax = 0;                 // Host.RandomDelay max
 		int initialDelay = 0;             // Host.InitialDelay
 		int triggeredTimes = 0;           // Host.TriggeredTimes (0 = unlimited)
+		int randomRange = 0;              // Host.RandomRange (cell radius to scatter into)
+		bool emptyCell = true;            // Host.RandomToEmptyCell (avoid occupied cells)
 		bool onlyBuilt = false;           // Host.OnlyBuilt
 	};
 

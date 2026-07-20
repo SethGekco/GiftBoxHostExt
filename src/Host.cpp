@@ -96,6 +96,8 @@ namespace GiftBoxHost
 			cfg.delay = pINI->ReadInteger(section, "Host.Delay", 0);
 			cfg.initialDelay = pINI->ReadInteger(section, "Host.InitialDelay", 0);
 			cfg.triggeredTimes = pINI->ReadInteger(section, "Host.TriggeredTimes", 0);
+			cfg.randomRange = pINI->ReadInteger(section, "Host.RandomRange", 0);
+			cfg.emptyCell = pINI->ReadBool(section, "Host.RandomToEmptyCell", true);
 			cfg.onlyBuilt = pINI->ReadBool(section, "Host.OnlyBuilt", false);
 
 			pINI->ReadString(section, "Host.RandomDelay", "", buf, sizeof(buf));
@@ -108,9 +110,36 @@ namespace GiftBoxHost
 	}
 
 	// ---- spawn primitive (ported from Kratos Gift.cpp, synced-RNG only) ------
-	static bool TryPutTechno(TechnoClass* pTechno, CoordStruct location)
+
+	// Choose a placement cell near `origin`, within `range` cells, preferring one
+	// the spawn type can stand on. With emptyCell=true it avoids occupied cells so
+	// a burst spreads out instead of stacking. Netplay-safe: every client runs the
+	// same code with the same synced RNG and synced map/cell state, so the draws
+	// and the break happen identically everywhere.
+	static CellClass* PickSpawnCell(TechnoTypeClass* pType, CoordStruct origin, int range, bool emptyCell)
 	{
-		CellClass* pCell = MapClass::Instance->TryGetCellAt(location);
+		CellClass* pCenter = MapClass::Instance->TryGetCellAt(origin);
+		if (!pCenter || range <= 0)
+			return pCenter;
+
+		CellStruct center = pCenter->MapCoords;
+		int attempts = (2 * range + 1) * (2 * range + 1);
+		for (int i = 0; i < attempts; ++i)
+		{
+			int dx = ScenarioClass::Instance->Random.RandomRanged(-range, range);
+			int dy = ScenarioClass::Instance->Random.RandomRanged(-range, range);
+			CellStruct pos{ static_cast<short>(center.X + dx), static_cast<short>(center.Y + dy) };
+			if (CellClass* pCell = MapClass::Instance->TryGetCellAt(pos))
+			{
+				if (pCell->IsClearToMove(pType->SpeedType, pType->MovementZone, !emptyCell, !emptyCell))
+					return pCell;
+			}
+		}
+		return pCenter; // nothing clear found in range: fall back to the origin cell
+	}
+
+	static bool TryPutTechno(TechnoClass* pTechno, CellClass* pCell)
+	{
 		if (!pCell)
 			return false;
 
@@ -121,17 +150,16 @@ namespace GiftBoxHost
 		pTechno->Unlimbo(xyz, DirType::East);
 		--Unsorted::IKnowWhatImDoing;
 
-		xyz.Z = location.Z;
 		pTechno->SetLocation(xyz);
 		return true;
 	}
 
-	static TechnoClass* CreateAndPutTechno(TechnoTypeClass* pType, HouseClass* pHouse, CoordStruct location)
+	static TechnoClass* CreateAndPutTechno(TechnoTypeClass* pType, HouseClass* pHouse, CellClass* pCell)
 	{
 		// CreateObject for a TechnoType yields a TechnoClass-derived object
 		// (single, non-virtual inheritance chain), so this downcast is valid.
 		TechnoClass* pTechno = static_cast<TechnoClass*>(pType->CreateObject(pHouse));
-		if (pTechno && TryPutTechno(pTechno, location))
+		if (pTechno && TryPutTechno(pTechno, pCell))
 			return pTechno;
 		return nullptr;
 	}
@@ -202,7 +230,8 @@ namespace GiftBoxHost
 			int ok = 0;
 			for (int c = 0; c < count; ++c)
 			{
-				if (TechnoClass* pGift = CreateAndPutTechno(pSpawnType, pHouse, origin))
+				CellClass* pCell = PickSpawnCell(pSpawnType, origin, cfg.randomRange, cfg.emptyCell);
+				if (TechnoClass* pGift = CreateAndPutTechno(pSpawnType, pHouse, pCell))
 				{
 					MarkGiftSpawned(pGift);
 					++ok;
