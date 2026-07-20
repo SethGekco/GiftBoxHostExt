@@ -20,11 +20,23 @@ jobs:
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
-      - name: Enable MSVC problem matcher
-        uses: ammaraskar/msvc-problem-matcher@master
-
       - name: Build
-        run: msbuild GiftBoxHost.sln /p:Configuration=Release /p:Platform=x86 /nologo /consoleloggerparameters:NoSummary
+        run: msbuild GiftBoxHost.sln /p:Configuration=Release /p:Platform=x86 /nologo /flp:ErrorsOnly;LogFile=build_errors.txt
+
+      - name: Surface build errors as annotations
+        if: failure()
+        shell: pwsh
+        run: |
+          if (Test-Path build_errors.txt) {
+            $lines = Get-Content build_errors.txt | Where-Object { $_.Trim() -ne "" }
+            if ($lines.Count -eq 0) { Write-Output "::error::build failed but build_errors.txt is empty" }
+            foreach ($l in $lines) {
+              $m = ($l -replace '::','::').Trim()
+              Write-Output "::error::$m"
+            }
+          } else {
+            Write-Output "::error::build failed and no build_errors.txt was produced"
+          }
 
       - name: Upload DLL artifact
         uses: actions/upload-artifact@v4
