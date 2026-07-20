@@ -1,3 +1,12 @@
+This is an extract from Kratos to provide an individual alternative for the entire Kratos.dll. In theory,
+this will allow mods to use GiftBox and Host tags on units without using all of Kratos, which is speculated
+to come with problems for online play and game optimizations. This will not have AttachEffect support at this
+time, however. 
+
+Refer to Host and GiftBox tags in the Kratos manual, but note there is a new tag "Host.OnlyBuilt=yes" for
+units not spamming copies of themselves through a chain reaction allowing essentially Generals Red Guard like behavior without infantry
+clones, which allows cleaner AI behavior (so long it's combined with Katos tag "Host.TriggeredTimes=1").
+
 [![license](https://www.gnu.org/graphics/lgplv3-147x51.png)](https://www.gnu.org/licenses/lgpl-3.0.en.html)
 
 前言 (Foreword)
