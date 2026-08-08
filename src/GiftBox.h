@@ -45,6 +45,10 @@ namespace GiftBoxHost
 		bool randomType = false;          // GiftBox.RandomType
 		std::vector<int> weights;         // GiftBox.RandomWeights
 		std::vector<double> chances;      // GiftBox.Chances
+		bool inheritHealth = false;       // GiftBox.InheritHealth
+		double healthPercent = 0.0;       // GiftBox.HealthPercent (0 = copy box %)
+		bool inheritVeterancy = false;    // GiftBox.InheritVeterancy
+		bool inheritPassenger = false;    // GiftBox.InheritPassenger
 	};
 
 	struct GiftBoxState

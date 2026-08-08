@@ -2,6 +2,7 @@
 #include "Serialize.h"
 
 #include <GeneralDefinitions.h>   // DirType
+#include <FootClass.h>            // passenger transfer (FootClass*), cast-trait completeness
 #include <TechnoClass.h>
 #include <TechnoTypeClass.h>
 #include <HouseClass.h>
@@ -83,8 +84,39 @@ namespace GiftBoxHost::Spawn
 		return ok;
 	}
 
+	static void ApplyInherit(TechnoClass* pGift, const InheritSpec& in)
+	{
+		if (!in.source)
+			return;
+
+		if (in.health)
+		{
+			double pct = in.healthPercent > 0.0 ? in.healthPercent : in.source->GetHealthPercentage();
+			if (pct <= 0.0) pct = 1.0;
+			if (pct > 1.0) pct = 1.0;
+			int hp = static_cast<int>(pGift->GetTechnoType()->Strength * pct);
+			if (hp < 1) hp = 1;
+			pGift->Health = hp;
+		}
+
+		if (in.veterancy)
+			pGift->Veterancy = in.source->Veterancy;
+
+		if (in.passengers)
+		{
+			int cap = pGift->GetTechnoType()->Passengers;
+			while (in.source->Passengers.NumPassengers > 0 && pGift->Passengers.NumPassengers < cap)
+			{
+				FootClass* pPassenger = in.source->Passengers.RemoveFirstPassenger();
+				if (!pPassenger)
+					break;
+				pGift->AddPassenger(pPassenger);
+			}
+		}
+	}
+
 	int ReleaseList(const std::vector<TechnoTypeClass*>& gifts, HouseClass* pHouse,
-		CoordStruct origin, int range, bool emptyCell)
+		CoordStruct origin, int range, bool emptyCell, const InheritSpec& inherit)
 	{
 		int ok = 0;
 		for (TechnoTypeClass* pType : gifts)
@@ -93,6 +125,7 @@ namespace GiftBoxHost::Spawn
 			if (TechnoClass* pGift = CreateAndPut(pType, pHouse, pCell))
 			{
 				MarkGiftSpawned(pGift);
+				ApplyInherit(pGift, inherit);
 				++ok;
 			}
 		}

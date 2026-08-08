@@ -52,6 +52,11 @@ namespace GiftBoxHost
 			pINI->ReadString(s, "GiftBox.Chances", "", buf, sizeof(buf));
 			cfg.chances = Ini::SplitChances(buf);
 
+			cfg.inheritHealth = pINI->ReadBool(s, "GiftBox.InheritHealth", false);
+			cfg.healthPercent = pINI->ReadDouble(s, "GiftBox.HealthPercent", 0.0);
+			cfg.inheritVeterancy = pINI->ReadBool(s, "GiftBox.InheritVeterancy", false);
+			cfg.inheritPassenger = pINI->ReadBool(s, "GiftBox.InheritPassenger", false);
+
 			pINI->ReadString(s, "GiftBox.RandomDelay", "", buf, sizeof(buf));
 			std::vector<int> rd = Ini::SplitInts(buf);
 			if (rd.size() >= 2) { cfg.delayMin = rd[0]; cfg.delayMax = rd[1]; }
@@ -73,7 +78,13 @@ namespace GiftBoxHost
 		CoordStruct origin = pBox->GetCoords();
 		TechnoTypeClass* pBoxType = pBox->GetTechnoType();
 		auto gifts = Spawn::BuildGiftList(cfg.types, cfg.nums, cfg.chances, cfg.randomType, cfg.weights);
-		int ok = Spawn::ReleaseList(gifts, pHouse, origin, cfg.randomRange, cfg.emptyCell);
+		Spawn::InheritSpec inherit;
+		inherit.source = pBox;
+		inherit.health = cfg.inheritHealth || cfg.healthPercent > 0.0;
+		inherit.healthPercent = cfg.healthPercent;
+		inherit.veterancy = cfg.inheritVeterancy;
+		inherit.passengers = cfg.inheritPassenger;
+		int ok = Spawn::ReleaseList(gifts, pHouse, origin, cfg.randomRange, cfg.emptyCell, inherit);
 		Log("[GiftBox] %s open(%s): released %d/%d at (%d,%d,%d)",
 			pBoxType->ID, why, ok, (int)gifts.size(), origin.X, origin.Y, origin.Z);
 	}

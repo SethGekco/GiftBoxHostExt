@@ -50,6 +50,10 @@ namespace GiftBoxHost
 			pINI->ReadString(section, "Host.Chances", "", buf, sizeof(buf));
 			cfg.chances = Ini::SplitChances(buf);
 
+			cfg.inheritHealth = pINI->ReadBool(section, "Host.InheritHealth", false);
+			cfg.healthPercent = pINI->ReadDouble(section, "Host.HealthPercent", 0.0);
+			cfg.inheritVeterancy = pINI->ReadBool(section, "Host.InheritVeterancy", false);
+
 			pINI->ReadString(section, "Host.RandomDelay", "", buf, sizeof(buf));
 			std::vector<int> rd = Ini::SplitInts(buf);
 			if (rd.size() >= 2) { cfg.delayMin = rd[0]; cfg.delayMax = rd[1]; }
@@ -130,7 +134,12 @@ namespace GiftBoxHost
 		HouseClass* pHouse = pTechno->Owner;
 		CoordStruct origin = pTechno->GetCoords();
 		auto gifts = Spawn::BuildGiftList(cfg.types, cfg.nums, cfg.chances, cfg.randomType, cfg.weights);
-		int ok = Spawn::ReleaseList(gifts, pHouse, origin, cfg.randomRange, cfg.emptyCell);
+		Spawn::InheritSpec inherit;
+		inherit.source = pTechno;
+		inherit.health = cfg.inheritHealth || cfg.healthPercent > 0.0;
+		inherit.healthPercent = cfg.healthPercent;
+		inherit.veterancy = cfg.inheritVeterancy;
+		int ok = Spawn::ReleaseList(gifts, pHouse, origin, cfg.randomRange, cfg.emptyCell, inherit);
 		Log("[Host] %s burst by %p (cnt=%d): spawned %d/%d at (%d,%d,%d)",
 			pType->ID, (void*)pTechno, st.count, ok, (int)gifts.size(),
 			origin.X, origin.Y, origin.Z);

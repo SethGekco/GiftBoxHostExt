@@ -31,10 +31,23 @@ namespace GiftBoxHost::Spawn
 		bool randomType,
 		const std::vector<int>& weights);
 
-	// Place each type in `gifts` near origin (scattered), marking them gift-spawned.
-	// Returns the number successfully placed.
+	// Optional inheritance applied to each released unit, sourced from the
+	// spawning host/box. Health/veterancy are safe for any source; passengers
+	// only make sense when the source is consumed (a GiftBox), and transfer up to
+	// the gift's own passenger capacity.
+	struct InheritSpec
+	{
+		TechnoClass* source = nullptr;
+		bool health = false;
+		double healthPercent = 0.0;   // 0 = copy the source's current health %
+		bool veterancy = false;
+		bool passengers = false;
+	};
+
+	// Place each type in `gifts` near origin (scattered), marking them gift-spawned
+	// and applying `inherit`. Returns the number successfully placed.
 	int ReleaseList(const std::vector<TechnoTypeClass*>& gifts, HouseClass* pHouse,
-		CoordStruct origin, int range, bool emptyCell);
+		CoordStruct origin, int range, bool emptyCell, const InheritSpec& inherit);
 
 	// Pick a placement cell near `origin`, within `range` cells. When emptyCell is
 	// true, prefers a cell the type can actually stand on (spreads a burst out).

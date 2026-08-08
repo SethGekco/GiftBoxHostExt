@@ -65,10 +65,35 @@ GiftBox.Delay=75
 GiftBox.Remove=yes
 ```
 
+## Inheritance — spawned/released units carry over the source's state
+
+These apply to **both** Host and GiftBox (prefix with `Host.` or `GiftBox.`). The
+source is the spawning unit (the host) or the box.
+
+| Key | Type | Default | Meaning |
+|-----|------|---------|---------|
+| `…InheritHealth` | bool | `no` | Give each spawned unit the **same health %** the source currently has. |
+| `…HealthPercent` | float | `0` | Force a specific health fraction (`0.5` = 50 %). Overrides `InheritHealth`; `0` = off. |
+| `…InheritVeterancy` | bool | `no` | Copy the source's veterancy (rookie/veteran/elite) to each spawned unit. |
+| `GiftBox.InheritPassenger` | bool | `no` | **GiftBox only** — move the box's passengers into the released units (up to each unit's own passenger capacity). Meant for the "transport spills its cargo" case; not offered on Host since the host keeps living. |
+
+```ini
+[VETSPAWN]            ; an elite host spawns elite, full-health copies
+Host.Types=E1
+Host.Delay=200
+Host.InheritVeterancy=yes
+Host.InheritHealth=yes
+
+[APOC]                ; a destroyed Apocalypse leaves a wounded veteran behind
+GiftBox.Types=HTNK
+GiftBox.OpenWhenDestroyed=yes
+GiftBox.InheritVeterancy=yes
+GiftBox.HealthPercent=0.4
+```
+
 ## Notes
 
 - All randomness uses the game's synchronized RNG, so Host and GiftBox are multiplayer-safe.
 - Spawned units take the host/box owner (house).
 - Host and GiftBox can be combined on the same unit if you want both behaviors.
-- Not yet ported: type weighting (`RandomType`/`RandomWeights`/`Chances`) and
-  inheritance (health/veterancy/passengers). Coming in a later revision.
+- State (timers, caps, chain-guard flags) persists across savegames.
