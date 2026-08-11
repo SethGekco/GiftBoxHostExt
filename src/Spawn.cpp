@@ -1,5 +1,6 @@
 #include "Spawn.h"
 #include "Serialize.h"
+#include "Log.h"
 
 #include <GeneralDefinitions.h>   // DirType
 #include <FootClass.h>            // passenger transfer (FootClass*), cast-trait completeness
@@ -27,18 +28,31 @@ namespace GiftBoxHost::Spawn
 			return pCenter;
 
 		CellStruct center = pCenter->MapCoords;
-		int attempts = (2 * range + 1) * (2 * range + 1);
-		for (int i = 0; i < attempts; ++i)
+
+		// Candidate offsets within the range box (Kratos-style: pick a random offset
+		// index each try, add to the center cell via CellStruct operator+).
+		std::vector<CellStruct> offsets;
+		for (short ox = static_cast<short>(-range); ox <= static_cast<short>(range); ++ox)
+			for (short oy = static_cast<short>(-range); oy <= static_cast<short>(range); ++oy)
+				offsets.push_back(CellStruct{ ox, oy });
+
+		int count = static_cast<int>(offsets.size());
+		for (int i = 0; i < count; ++i)
 		{
-			int dx = ScenarioClass::Instance->Random.RandomRanged(-range, range);
-			int dy = ScenarioClass::Instance->Random.RandomRanged(-range, range);
-			CellStruct pos{ static_cast<short>(center.X + dx), static_cast<short>(center.Y + dy) };
-			if (CellClass* pCell = MapClass::Instance->TryGetCellAt(pos))
+			int idx = ScenarioClass::Instance->Random.RandomRanged(0, count - 1);
+			CellStruct target = center + offsets[idx];
+			if (CellClass* pCell = MapClass::Instance->TryGetCellAt(target))
 			{
 				if (pCell->IsClearToMove(pType->SpeedType, pType->MovementZone, !emptyCell, !emptyCell))
+				{
+					Log("[Spawn] center(%d,%d) off(%d,%d) -> cell(%d,%d)",
+						center.X, center.Y, offsets[idx].X, offsets[idx].Y,
+						pCell->MapCoords.X, pCell->MapCoords.Y);
 					return pCell;
+				}
 			}
 		}
+		Log("[Spawn] center(%d,%d) no clear cell in range %d -> fallback", center.X, center.Y, range);
 		return pCenter; // nothing clear in range: fall back to the origin cell
 	}
 
