@@ -24,6 +24,8 @@ namespace GiftBoxHost::Spawn
 	CellClass* PickCell(TechnoTypeClass* pType, CoordStruct origin, int range, bool emptyCell)
 	{
 		CellClass* pCenter = MapClass::Instance->TryGetCellAt(origin);
+		Log("[Spawn] PickCell origin(%d,%d,%d) range=%d pCenter=%p",
+			origin.X, origin.Y, origin.Z, range, (void*)pCenter);
 		if (!pCenter || range <= 0)
 			return pCenter;
 
@@ -77,7 +79,9 @@ namespace GiftBoxHost::Spawn
 		// CreateObject for a TechnoType yields a TechnoClass-derived object
 		// (single, non-virtual inheritance chain), so this downcast is valid.
 		TechnoClass* pTechno = static_cast<TechnoClass*>(pType->CreateObject(pHouse));
-		if (pTechno && TryPut(pTechno, pCell))
+		bool put = pTechno && TryPut(pTechno, pCell);
+		Log("[Spawn] CreateAndPut techno=%p pCell=%p put=%d", (void*)pTechno, (void*)pCell, (int)put);
+		if (put)
 			return pTechno;
 		return nullptr;
 	}
