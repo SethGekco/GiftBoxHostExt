@@ -44,23 +44,13 @@ namespace GiftBoxHost::Spawn
 		bool passengers = false;
 	};
 
-	// Place each type in `gifts` near origin (scattered), marking them gift-spawned
-	// and applying `inherit`. Returns the number successfully placed.
+	// Place each gift near `pSource` (scattered up to `range` cells), marking them
+	// gift-spawned and applying `inherit`. Returns the number successfully placed.
+	// Uses the engine's own cell for the source (big-map safe, unlike YRpp's
+	// hardcoded-512-stride cell lookups). Falls back to the source cell so a gift
+	// always lands somewhere valid.
 	int ReleaseList(const std::vector<TechnoTypeClass*>& gifts, HouseClass* pHouse,
-		CoordStruct origin, int range, bool emptyCell, const InheritSpec& inherit);
-
-	// Pick a placement cell near `origin`, within `range` cells. When emptyCell is
-	// true, prefers a cell the type can actually stand on (spreads a burst out).
-	CellClass* PickCell(TechnoTypeClass* pType, CoordStruct origin, int range, bool emptyCell);
-
-	// Create one unit of pType for pHouse and place it on pCell. Returns it (marked
-	// gift-spawned by the caller via Release), or nullptr on failure.
-	TechnoClass* CreateAndPut(TechnoTypeClass* pType, HouseClass* pHouse, CellClass* pCell);
-
-	// Spawn `count` of pType near origin, marking each as gift-spawned. Returns the
-	// number successfully placed.
-	int Release(TechnoTypeClass* pType, HouseClass* pHouse, CoordStruct origin,
-		int count, int range, bool emptyCell);
+		TechnoClass* pSource, int range, const InheritSpec& inherit);
 
 	// Chain-guard registry: a unit produced by Host/GiftBox is remembered so that,
 	// under OnlyBuilt, it will not itself spawn.

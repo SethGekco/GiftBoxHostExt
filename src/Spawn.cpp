@@ -21,85 +21,49 @@ namespace GiftBoxHost::Spawn
 	// iterated for game logic), so pointer keys are deterministic / netplay-safe.
 	static std::unordered_set<TechnoClass*> g_giftSpawned;
 
-	CellClass* PickCell(TechnoTypeClass* pType, CoordStruct origin, int range, bool emptyCell)
+	// Big-map-safe placement. YRpp's inline cell-array indexing (GetCellIndex /
+	// TryGetCellAt / Coord2Cell) hardcodes the vanilla 512-cell stride, so on
+	// MapSizeExt-expanded maps it returns the wrong (or a null) cell. We instead
+	// take the source's OWN cell from the engine (GetCell, a virtual that uses the
+	// real map) and scatter by world-coordinate offset (256 leptons per cell),
+	// letting Unlimbo validate the final placement.
+	static CoordStruct SpawnBaseCoord(TechnoClass* pSource)
 	{
-		CellClass* pCenter = MapClass::Instance->TryGetCellAt(origin);
-		Log("[Spawn] PickCell origin(%d,%d,%d) range=%d pCenter=%p",
-			origin.X, origin.Y, origin.Z, range, (void*)pCenter);
-		if (!pCenter || range <= 0)
-			return pCenter;
+		if (CellClass* pCell = pSource->GetCell())
+			return pCell->GetCoordsWithBridge();
+		return pSource->GetCoords();
+	}
 
-		CellStruct center = pCenter->MapCoords;
+	// Create one gift and place it near `base`, scattered up to `range` cells.
+	// Tries several scattered spots, then falls back to the base cell so a gift
+	// always lands somewhere valid. Returns nullptr only if even the base fails.
+	static TechnoClass* PlaceGift(TechnoTypeClass* pType, HouseClass* pHouse, CoordStruct base, int range)
+	{
+		TechnoClass* pGift = static_cast<TechnoClass*>(pType->CreateObject(pHouse));
+		if (!pGift)
+			return nullptr;
 
-		// Candidate offsets within the range box (Kratos-style: pick a random offset
-		// index each try, add to the center cell via CellStruct operator+).
-		std::vector<CellStruct> offsets;
-		for (short ox = static_cast<short>(-range); ox <= static_cast<short>(range); ++ox)
-			for (short oy = static_cast<short>(-range); oy <= static_cast<short>(range); ++oy)
-				offsets.push_back(CellStruct{ ox, oy });
-
-		int count = static_cast<int>(offsets.size());
-		for (int i = 0; i < count; ++i)
+		int scatterTries = range > 0 ? 8 : 0;
+		for (int t = 0; t <= scatterTries; ++t)
 		{
-			int idx = ScenarioClass::Instance->Random.RandomRanged(0, count - 1);
-			CellStruct target = center + offsets[idx];
-			if (CellClass* pCell = MapClass::Instance->TryGetCellAt(target))
+			CoordStruct coords = base;
+			if (t < scatterTries) // last iteration always uses the base cell
 			{
-				if (pCell->IsClearToMove(pType->SpeedType, pType->MovementZone, !emptyCell, !emptyCell))
-				{
-					Log("[Spawn] center(%d,%d) off(%d,%d) -> cell(%d,%d)",
-						center.X, center.Y, offsets[idx].X, offsets[idx].Y,
-						pCell->MapCoords.X, pCell->MapCoords.Y);
-					return pCell;
-				}
+				int dx = ScenarioClass::Instance->Random.RandomRanged(0, 2 * range) - range;
+				int dy = ScenarioClass::Instance->Random.RandomRanged(0, 2 * range) - range;
+				coords.X += dx * 256;
+				coords.Y += dy * 256;
+			}
+			++Unsorted::IKnowWhatImDoing;
+			bool placed = pGift->Unlimbo(coords, DirType::East);
+			--Unsorted::IKnowWhatImDoing;
+			if (placed)
+			{
+				pGift->SetLocation(coords);
+				return pGift;
 			}
 		}
-		Log("[Spawn] center(%d,%d) no clear cell in range %d -> fallback", center.X, center.Y, range);
-		return pCenter; // nothing clear in range: fall back to the origin cell
-	}
-
-	static bool TryPut(TechnoClass* pTechno, CellClass* pCell)
-	{
-		if (!pCell)
-			return false;
-
-		pTechno->OnBridge = pCell->ContainsBridge();
-		CoordStruct xyz = pCell->GetCoordsWithBridge();
-
-		++Unsorted::IKnowWhatImDoing;
-		pTechno->Unlimbo(xyz, DirType::East);
-		--Unsorted::IKnowWhatImDoing;
-
-		pTechno->SetLocation(xyz);
-		return true;
-	}
-
-	TechnoClass* CreateAndPut(TechnoTypeClass* pType, HouseClass* pHouse, CellClass* pCell)
-	{
-		// CreateObject for a TechnoType yields a TechnoClass-derived object
-		// (single, non-virtual inheritance chain), so this downcast is valid.
-		TechnoClass* pTechno = static_cast<TechnoClass*>(pType->CreateObject(pHouse));
-		bool put = pTechno && TryPut(pTechno, pCell);
-		Log("[Spawn] CreateAndPut techno=%p pCell=%p put=%d", (void*)pTechno, (void*)pCell, (int)put);
-		if (put)
-			return pTechno;
-		return nullptr;
-	}
-
-	int Release(TechnoTypeClass* pType, HouseClass* pHouse, CoordStruct origin,
-		int count, int range, bool emptyCell)
-	{
-		int ok = 0;
-		for (int c = 0; c < count; ++c)
-		{
-			CellClass* pCell = PickCell(pType, origin, range, emptyCell);
-			if (TechnoClass* pGift = CreateAndPut(pType, pHouse, pCell))
-			{
-				MarkGiftSpawned(pGift);
-				++ok;
-			}
-		}
-		return ok;
+		return nullptr; // could not place even at the source cell (very rare)
 	}
 
 	static void ApplyInherit(TechnoClass* pGift, const InheritSpec& in)
@@ -134,13 +98,15 @@ namespace GiftBoxHost::Spawn
 	}
 
 	int ReleaseList(const std::vector<TechnoTypeClass*>& gifts, HouseClass* pHouse,
-		CoordStruct origin, int range, bool emptyCell, const InheritSpec& inherit)
+		TechnoClass* pSource, int range, const InheritSpec& inherit)
 	{
+		if (!pSource)
+			return 0;
 		int ok = 0;
+		CoordStruct base = SpawnBaseCoord(pSource);
 		for (TechnoTypeClass* pType : gifts)
 		{
-			CellClass* pCell = PickCell(pType, origin, range, emptyCell);
-			if (TechnoClass* pGift = CreateAndPut(pType, pHouse, pCell))
+			if (TechnoClass* pGift = PlaceGift(pType, pHouse, base, range))
 			{
 				MarkGiftSpawned(pGift);
 				ApplyInherit(pGift, inherit);

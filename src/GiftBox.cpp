@@ -84,7 +84,7 @@ namespace GiftBoxHost
 		inherit.healthPercent = cfg.healthPercent;
 		inherit.veterancy = cfg.inheritVeterancy;
 		inherit.passengers = cfg.inheritPassenger;
-		int ok = Spawn::ReleaseList(gifts, pHouse, origin, cfg.randomRange, cfg.emptyCell, inherit);
+		int ok = Spawn::ReleaseList(gifts, pHouse, pBox, cfg.randomRange, inherit);
 		Log("[GiftBox] %s open(%s): released %d/%d at (%d,%d,%d)",
 			pBoxType->ID, why, ok, (int)gifts.size(), origin.X, origin.Y, origin.Z);
 	}

@@ -139,7 +139,7 @@ namespace GiftBoxHost
 		inherit.health = cfg.inheritHealth || cfg.healthPercent > 0.0;
 		inherit.healthPercent = cfg.healthPercent;
 		inherit.veterancy = cfg.inheritVeterancy;
-		int ok = Spawn::ReleaseList(gifts, pHouse, origin, cfg.randomRange, cfg.emptyCell, inherit);
+		int ok = Spawn::ReleaseList(gifts, pHouse, pTechno, cfg.randomRange, inherit);
 		Log("[Host] %s burst by %p (cnt=%d): spawned %d/%d at (%d,%d,%d)",
 			pType->ID, (void*)pTechno, st.count, ok, (int)gifts.size(),
 			origin.X, origin.Y, origin.Z);
