@@ -52,9 +52,12 @@ namespace GiftBoxHost::Spawn
 	int ReleaseList(const std::vector<TechnoTypeClass*>& gifts, HouseClass* pHouse,
 		TechnoClass* pSource, int range, const InheritSpec& inherit);
 
-	// Chain-guard registry: a unit produced by Host/GiftBox is remembered so that,
-	// under OnlyBuilt, it will not itself spawn.
-	void MarkGiftSpawned(TechnoClass* pTechno);
-	bool IsGiftSpawned(TechnoClass* pTechno);
+	// "Built" registry (drives OnlyBuilt). A unit is marked built when a factory
+	// kicks it out (the KickOutUnit hook). Under OnlyBuilt=yes, ONLY built units
+	// Host/open — so paradropped, crate, map-placed and Host/GiftBox-spawned units
+	// (none of which pass through KickOutUnit) never chain. The flag is set at
+	// creation, never consumed on read, and cleared on death (Forget).
+	void MarkBuilt(TechnoClass* pTechno);
+	bool IsBuilt(TechnoClass* pTechno);
 	void Forget(TechnoClass* pTechno);   // called from the TechnoClass destructor hook
 }

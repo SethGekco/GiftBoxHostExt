@@ -128,7 +128,7 @@ namespace GiftBoxHost
 		const GiftBoxConfig& cfg = GetGiftBoxConfig(pType);
 		if (!cfg.enabled || cfg.openWhenDestroyed)   // death-triggered boxes handled in GiftBoxOnDestroyed
 			return;
-		if (cfg.onlyBuilt && Spawn::IsGiftSpawned(pTechno))
+		if (cfg.onlyBuilt && !Spawn::IsBuilt(pTechno))
 			return;
 
 		GiftBoxState& st = g_states[pTechno];
@@ -171,7 +171,7 @@ namespace GiftBoxHost
 		const GiftBoxConfig& cfg = GetGiftBoxConfig(pType);
 		if (!cfg.enabled || !cfg.openWhenDestroyed)
 			return;
-		if (cfg.onlyBuilt && Spawn::IsGiftSpawned(pTechno))
+		if (cfg.onlyBuilt && !Spawn::IsBuilt(pTechno))
 			return;
 
 		GiftBoxState& st = g_states[pTechno];

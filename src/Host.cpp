@@ -110,8 +110,9 @@ namespace GiftBoxHost
 		if (!cfg.enabled)
 			return;
 
-		// Chain-spawn guard: a unit produced by a Host/GiftBox never hosts copies.
-		if (cfg.onlyBuilt && Spawn::IsGiftSpawned(pTechno))
+		// OnlyBuilt: only factory-built units Host. Excludes spawned copies (chain
+		// guard) AND paradropped / crate / map-placed units — none pass KickOutUnit.
+		if (cfg.onlyBuilt && !Spawn::IsBuilt(pTechno))
 			return;
 
 		// Burst cap: stop after Host.TriggeredTimes bursts (0 = unlimited).

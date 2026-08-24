@@ -37,3 +37,17 @@ DEFINE_HOOK(0x6F4500, GiftBoxHost_TechnoDTOR, 0x5)
 	GiftBoxHost::Spawn::Forget(pThis);
 	return 0;
 }
+
+// BuildingClass::KickOutUnit entry -> mark the ejected unit "built", so OnlyBuilt
+// admits only factory-produced units (paradrop/crate/map/spawned never reach here).
+// Verified via objdump: 0x443B90 is the function entry (NOP-padded boundary);
+// KickOutUnit(TechnoClass* pTechno, CellStruct) has pTechno at [esp+4] on entry.
+// Size 0xB covers whole instructions (push esi; mov esi,ecx; push edi; cmp[esi+0xAC]).
+// Unhooked address (frameworks hook the inner type branches at 0x443CCA/0x444119/
+// 0x444131, not the entry).
+DEFINE_HOOK(0x443B90, GiftBoxHost_KickOutUnit_MarkBuilt, 0xB)
+{
+	GET_STACK(TechnoClass*, pTechno, 0x4);
+	GiftBoxHost::Spawn::MarkBuilt(pTechno);
+	return 0;
+}

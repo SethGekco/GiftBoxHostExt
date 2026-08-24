@@ -17,9 +17,10 @@
 
 namespace GiftBoxHost::Spawn
 {
-	// Units produced by a Host/GiftBox. Only ever queried by pointer (never
-	// iterated for game logic), so pointer keys are deterministic / netplay-safe.
-	static std::unordered_set<TechnoClass*> g_giftSpawned;
+	// Units a factory has kicked out (= "built"). Only ever queried by pointer
+	// (never iterated for game logic), so pointer keys are deterministic /
+	// netplay-safe. Persisted across savegames; cleared on unit death.
+	static std::unordered_set<TechnoClass*> g_built;
 
 	// Big-map-safe placement. YRpp's inline cell-array indexing (GetCellIndex /
 	// TryGetCellAt / Coord2Cell) hardcodes the vanilla 512-cell stride, so on
@@ -108,7 +109,8 @@ namespace GiftBoxHost::Spawn
 		{
 			if (TechnoClass* pGift = PlaceGift(pType, pHouse, base, range))
 			{
-				MarkGiftSpawned(pGift);
+				// Deliberately NOT marked built — a spawned gift never went through
+				// a factory, so under OnlyBuilt it won't Host/open (chain guard).
 				ApplyInherit(pGift, inherit);
 				++ok;
 			}
@@ -192,26 +194,26 @@ namespace GiftBoxHost::Spawn
 		return out;
 	}
 
-	void MarkGiftSpawned(TechnoClass* pTechno) { g_giftSpawned.insert(pTechno); }
-	bool IsGiftSpawned(TechnoClass* pTechno) { return g_giftSpawned.count(pTechno) != 0; }
-	void Forget(TechnoClass* pTechno) { g_giftSpawned.erase(pTechno); }
+	void MarkBuilt(TechnoClass* pTechno) { if (pTechno) g_built.insert(pTechno); }
+	bool IsBuilt(TechnoClass* pTechno) { return g_built.count(pTechno) != 0; }
+	void Forget(TechnoClass* pTechno) { g_built.erase(pTechno); }
 
 	void SaveState(IStream* stream)
 	{
-		unsigned count = static_cast<unsigned>(g_giftSpawned.size());
+		unsigned count = static_cast<unsigned>(g_built.size());
 		Serialize::Write(stream, count);
-		for (TechnoClass* p : g_giftSpawned)
+		for (TechnoClass* p : g_built)
 			Serialize::WritePtr(stream, p);
 	}
 
 	void LoadState(IStream* stream)
 	{
-		g_giftSpawned.clear();
+		g_built.clear();
 		unsigned count = 0;
 		if (!Serialize::Read(stream, count))
 			return;
 		for (unsigned i = 0; i < count; ++i)
 			if (void* p = Serialize::ReadSwizzled(stream))
-				g_giftSpawned.insert(static_cast<TechnoClass*>(p));
+				g_built.insert(static_cast<TechnoClass*>(p));
 	}
 }
