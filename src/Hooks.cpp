@@ -46,9 +46,14 @@ DEFINE_HOOK(0x6F4500, GiftBoxHost_TechnoDTOR, 0x5)
 // entry (the fn reloads it as `mov edi,[esp+0x144]` after `sub esp,0x130`+4 pushes).
 // Size 0x6 = the first instruction `sub esp,0x130`. Unhooked address (frameworks
 // hook the inner type branches at 0x443CCA/0x444119/0x444131, not the entry).
+// At entry (before the prologue runs) ECX is still `this` = the producing
+// factory, and arg1 (pTechno) is at [esp+4].
 DEFINE_HOOK(0x443C60, GiftBoxHost_KickOutUnit_MarkBuilt, 0x6)
 {
+	GET(TechnoClass*, pBuilding, ECX);
 	GET_STACK(TechnoClass*, pTechno, 0x4);
 	GiftBoxHost::Spawn::MarkBuilt(pTechno);
+	// Stamp the factory's Host.Add* grants + Host.RatioAmount onto the unit.
+	GiftBoxHost::ApplyBuildingGrants(pBuilding, pTechno);
 	return 0;
 }

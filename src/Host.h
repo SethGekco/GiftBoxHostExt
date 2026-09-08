@@ -47,14 +47,54 @@ namespace GiftBoxHost
 		bool inheritVeterancy = false;    // Host.InheritVeterancy
 	};
 
+	// One granted host "job", stamped onto a unit by the factory that built it
+	// (Host.AddTypes[N]= etc). Each granted TYPE is its own job with independent
+	// amount/delay/count/timer — the most flexible model.
+	struct GrantJob
+	{
+		TechnoTypeClass* type = nullptr;
+		int amount = 1;   // per burst (AddAmount), before RatioAmount
+		int delay = 0;    // frames between bursts (AddDelay)
+		int count = 0;    // max bursts, 0 = unlimited (AddCount)
+		int timer = -1;   // -1 = not primed yet
+		int fired = 0;    // bursts done
+	};
+
 	struct HostState
 	{
-		bool initialized = false;   // has the timer been primed?
-		int timer = 0;              // frames until next burst
-		int count = 0;              // bursts performed (vs Host.TriggeredTimes)
+		bool initialized = false;   // base Host: has the timer been primed?
+		int timer = 0;              // base Host: frames until next burst
+		int count = 0;              // base Host: bursts performed
+		// Factory-granted layer (set at KickOutUnit via ApplyBuildingGrants):
+		double ratio = 1.0;         // Host.RatioAmount from the producing building
+		bool roundUp = false;       // Host.RoundUp
+		std::vector<GrantJob> grantJobs;  // building-granted per-type jobs
+	};
+
+	// One [N] grant entry on a factory: parallel per-type lists.
+	struct GrantEntry
+	{
+		std::vector<std::string> types;   // Host.AddTypes[N]
+		std::vector<int> amounts;         // Host.AddAmount[N]
+		std::vector<int> delays;          // Host.AddDelay[N]
+		std::vector<int> counts;          // Host.AddCount[N]
+	};
+
+	// Per-BuildingType grant config (parsed once, cached).
+	struct BuildingGrantConfig
+	{
+		bool enabled = false;             // has entries or a non-default ratio
+		double ratio = 1.0;               // Host.RatioAmount (0.0 disables hosting)
+		bool roundUp = false;             // Host.RoundUp
+		std::vector<GrantEntry> entries;  // Host.AddTypes / [1] / [2] ...
 	};
 
 	const HostConfig& GetHostConfig(TechnoTypeClass* pType);
+	const BuildingGrantConfig& GetBuildingGrants(TechnoTypeClass* pBuildingType);
+
+	// Stamp a producing factory's Host grants (+ RatioAmount) onto a unit it just
+	// kicked out. Called from the KickOutUnit hook.
+	void ApplyBuildingGrants(TechnoClass* pBuilding, TechnoClass* pUnit);
 
 	// One tick of Host logic for a unit (called from the update hook).
 	void UpdateHost(TechnoClass* pTechno);

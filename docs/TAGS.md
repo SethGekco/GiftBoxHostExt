@@ -33,6 +33,49 @@ Host.Delay=450
 Host.OnlyBuilt=yes    ; only the factory-built SREF clones; clones don't chain
 ```
 
+## Host grants — a factory stamps Host behaviour onto the units it produces
+
+These go on a **producing building** (barracks, war factory, cloning vats, etc).
+Every unit that *exits that factory* (`KickOutUnit`) has the grant applied on top
+of whatever Host tags its own TechnoType already carries — granted jobs run
+**in addition to** the unit's own Host, each as an independent job with its own
+type / amount / delay / fire-count. Grants never chain: a unit spawned by a host
+never passes through `KickOutUnit`, so it never receives a grant.
+
+| Key | Type | Default | Meaning |
+|-----|------|---------|---------|
+| `Host.AddTypes` | list of type IDs | *(none)* | Types the granted host spawns. Presence enables a grant. |
+| `Host.AddAmount` | list of ints | `1` each | Per-burst count, parallel to `Host.AddTypes` (a single value applies to all types). |
+| `Host.AddDelay` | list of ints (frames) | `0` each | Frames between bursts, **per type**. `0` = every frame. |
+| `Host.AddCount` | list of ints | `0` each | Max bursts **per type** (`0` = unlimited). |
+| `Host.RatioAmount` | float | `1.0` | Multiplies **every** host count on units this factory builds — their own Host *and* the granted jobs. `0.0` disables hosting for that unit (single forever). |
+| `Host.RoundUp` | bool | `no` | When `RatioAmount` gives a fraction, round up (`yes`) or down (`no`). |
+
+**Indexed grants.** For several independent grants on one factory, index them:
+`Host.AddTypes[1]=`, `Host.AddAmount[1]=`, `Host.AddDelay[1]=`, `Host.AddCount[1]=`,
+and so on (the unbracketed form is index 0; `[0]` is accepted as a synonym).
+
+### Example
+
+```ini
+[GAPILE]              ; every unit this barracks builds also hosts, on top of its own tags
+Host.AddTypes=E1,E2   ; E1 and E2 are granted as two independent jobs
+Host.AddAmount=3,1    ; E1 x3 per burst, E2 x1
+Host.AddDelay=0,200   ; E1 immediately, E2 every 200 frames
+Host.AddCount=1,4     ; E1 fires once, E2 fires 4 times
+
+[NAWEAP]              ; a war factory whose products host twice as much, rounding up
+Host.RatioAmount=2.0
+Host.RoundUp=yes
+
+[GACNST]              ; a construction yard that suppresses hosting on everything it builds
+Host.RatioAmount=0.0
+```
+
+> **Not yet included (next phase):** per-grant `Prerequisite` / `RequiredHouses` /
+> power gating. Granted jobs also do not yet persist across a save/load if the unit
+> has *no* own Host tags (its own Host and the `RatioAmount` do persist).
+
 ## GiftBox — a "box" that releases units when it opens
 
 A box opens either on a **timer** or, iconically, **when it's destroyed**
